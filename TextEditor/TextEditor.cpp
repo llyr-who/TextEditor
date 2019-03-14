@@ -3,8 +3,10 @@
 
 #include "stdafx.h"
 #include "TextEditor.h"
+#include "FileHandler.h"
 
 #define MAX_LOADSTRING 100
+#define IDC_MAIN_EDIT 101
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -137,11 +139,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
+			case IDM_FILE_OPEN:
+				DoFileOpen(hWnd);
+				break;
+			case IDM_FILE_SAVEAS:
+				DoFileSave(hWnd);
+				break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
         }
         break;
+	case WM_CREATE:
+		{
+			HFONT hfDefault;
+			HWND hEdit;
+
+			hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
+				WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+				0, 0, 100, 100, hWnd, (HMENU)IDC_MAIN_EDIT, GetModuleHandle(NULL), NULL);
+			if (hEdit == NULL)
+				MessageBox(hWnd, _T("Could not create edit box."), _T("Error"), MB_OK | MB_ICONERROR);
+
+			hfDefault = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+			SendMessage(hEdit, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
+		}
+	break;
+	case WM_SIZE:
+		{
+			HWND hEdit;
+			RECT rcClient;
+
+			GetClientRect(hWnd, &rcClient);
+	
+			hEdit = GetDlgItem(hWnd, IDC_MAIN_EDIT);
+			SetWindowPos(hEdit, NULL, 0, 0, rcClient.right, rcClient.bottom, SWP_NOZORDER);
+		}
+	break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
