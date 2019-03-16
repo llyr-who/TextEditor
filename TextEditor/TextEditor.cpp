@@ -127,6 +127,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+	case WM_CREATE:
+	{
+		HFONT hfDefault;
+		HWND hEdit; // handle to the edit box
+		HWND hTool; // handle to the toolbar
+		TBBUTTON tbb[3];
+		TBADDBITMAP tbab;
+
+		// Create the Edit control
+
+		hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
+			WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+			0, 0, 100, 100, hWnd, (HMENU)IDC_MAIN_EDIT, GetModuleHandle(NULL), NULL);
+		if (hEdit == NULL)
+			MessageBox(hWnd, _T("Could not create edit box."), _T("Error"), MB_OK | MB_ICONERROR);
+
+		hfDefault = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+		SendMessage(hEdit, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
+	}
+	break;
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -150,21 +170,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
-	case WM_CREATE:
-		{
-			HFONT hfDefault;
-			HWND hEdit;
-
-			hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
-				WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-				0, 0, 100, 100, hWnd, (HMENU)IDC_MAIN_EDIT, GetModuleHandle(NULL), NULL);
-			if (hEdit == NULL)
-				MessageBox(hWnd, _T("Could not create edit box."), _T("Error"), MB_OK | MB_ICONERROR);
-
-			hfDefault = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-			SendMessage(hEdit, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
-		}
-	break;
 	case WM_SIZE:
 		{
 			HWND hEdit;

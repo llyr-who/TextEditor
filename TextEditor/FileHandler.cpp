@@ -56,7 +56,7 @@ BOOL SaveTextFileFromEdit(HWND hEdit, LPCTSTR pszFileName)
 			pszText = (LPSTR)GlobalAlloc(GPTR, dwBufferSize);
 			if (pszText != NULL)
 			{
-				if (GetWindowText(hEdit, (LPWSTR)pszText, dwBufferSize))
+				if (GetWindowTextA(hEdit, (LPSTR)pszText, dwBufferSize))
 				{
 					DWORD dwWritten;
 
