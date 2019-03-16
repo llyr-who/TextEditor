@@ -134,9 +134,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HWND hTool; // handle to the toolbar
 		TBBUTTON tbb[3];
 		TBADDBITMAP tbab;
+		HWND hStatus;
+		int statwidths[] = { 100, -1 };
 
 		// Create the Edit control
-
 		hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
 			WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
 			0, 0, 100, 100, hWnd, (HMENU)IDC_MAIN_EDIT, GetModuleHandle(NULL), NULL);
@@ -145,6 +146,46 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		hfDefault = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 		SendMessage(hEdit, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
+
+		// Create the toolbar
+		hTool = CreateWindowEx(0, TOOLBARCLASSNAME, NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0,
+			hWnd, (HMENU)IDC_MAIN_TOOL, GetModuleHandle(NULL), NULL);
+		if (hTool == NULL)
+			MessageBox(hWnd, _T("Could not create tool bar."), _T("Error"), MB_OK | MB_ICONERROR);
+		// Send the TB_BUTTONSTRUCTSIZE message, which is required for
+		// backward compatibility.
+		SendMessage(hTool, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
+		tbab.hInst = HINST_COMMCTRL;
+		tbab.nID = IDB_STD_SMALL_COLOR;
+		SendMessage(hTool, TB_ADDBITMAP, 0, (LPARAM)&tbab);
+
+		ZeroMemory(tbb, sizeof(tbb));
+		tbb[0].iBitmap = STD_FILENEW;
+		tbb[0].fsState = TBSTATE_ENABLED;
+		tbb[0].fsStyle = TBSTYLE_BUTTON;
+		tbb[0].idCommand = IDM_FILE_NEW;
+
+		tbb[1].iBitmap = STD_FILEOPEN;
+		tbb[1].fsState = TBSTATE_ENABLED;
+		tbb[1].fsStyle = TBSTYLE_BUTTON;
+		tbb[1].idCommand = IDM_FILE_OPEN;
+
+		tbb[2].iBitmap = STD_FILESAVE;
+		tbb[2].fsState = TBSTATE_ENABLED;
+		tbb[2].fsStyle = TBSTYLE_BUTTON;
+		tbb[2].idCommand = IDM_FILE_SAVEAS;
+
+		SendMessage(hTool, TB_ADDBUTTONS, sizeof(tbb) / sizeof(TBBUTTON), (LPARAM)&tbb);
+
+		// Create Status bar
+		hStatus = CreateWindowEx(0, STATUSCLASSNAME, NULL,
+			WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP, 0, 0, 0, 0,
+			hWnd, (HMENU)IDC_MAIN_STATUS, GetModuleHandle(NULL), NULL);
+
+
+		SendMessage(hStatus, SB_SETPARTS, sizeof(statwidths) / sizeof(int), (LPARAM)statwidths);
+		SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)"Hi there :)");
 	}
 	break;
     case WM_COMMAND:
@@ -156,6 +197,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
+			case IDM_FILE_NEW:
+				SetDlgItemText(hWnd, IDC_MAIN_EDIT, _T(""));
+				break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
@@ -172,13 +216,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_SIZE:
 		{
+			HWND hTool;
+			RECT rcTool;
+			int iToolHeight;
+
+			HWND hStatus;
+			RECT rcStatus;
+			int iStatusHeight;
+
 			HWND hEdit;
+			int iEditHeight;
 			RECT rcClient;
 
+			// Size toolbar and get height
+			hTool = GetDlgItem(hWnd, IDC_MAIN_TOOL);
+			SendMessage(hTool, TB_AUTOSIZE, 0, 0);
+			GetWindowRect(hTool, &rcTool);
+			iToolHeight = rcTool.bottom - rcTool.top;
+
+			// Size status bar and get height
+			hStatus = GetDlgItem(hWnd, IDC_MAIN_STATUS);
+			SendMessage(hStatus, WM_SIZE, 0, 0);
+			GetWindowRect(hStatus, &rcStatus);
+			iStatusHeight = rcStatus.bottom - rcStatus.top;
+
+			// Calculate remaining height and size edit
 			GetClientRect(hWnd, &rcClient);
-	
+			iEditHeight = rcClient.bottom - iToolHeight - iStatusHeight;
 			hEdit = GetDlgItem(hWnd, IDC_MAIN_EDIT);
-			SetWindowPos(hEdit, NULL, 0, 0, rcClient.right, rcClient.bottom, SWP_NOZORDER);
+			SetWindowPos(hEdit, NULL, 0, iToolHeight, rcClient.right, iEditHeight, SWP_NOZORDER);
 		}
 	break;
     case WM_PAINT:

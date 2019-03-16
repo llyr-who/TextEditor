@@ -4,10 +4,12 @@
 
 #define IDS_APP_TITLE			103
 #define IDC_MAIN_EDIT			101
+#define IDC_MAIN_TOOL			110
+#define IDC_MAIN_STATUS			111
 #define IDR_MAINMENU            102
 #define IDM_FILE_OPEN			40002
-#define IDM_FILE_SAVEAS          40003
-#define ID_FILE_NEW             40004
+#define IDM_FILE_SAVEAS         40003
+#define IDM_FILE_NEW             40004
 #define IDR_MAINFRAME			128
 #define IDD_TEXTEDITOR_DIALOG	102
 #define IDD_ABOUTBOX			103
