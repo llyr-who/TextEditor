@@ -5,13 +5,17 @@
 #include "TextEditor.h"
 #include "FileHandler.h"
 
-#define MAX_LOADSTRING 100
-#define IDC_MAIN_EDIT 101
+#define MAX_LOADSTRING 100 // Put this in stdafx
+
+const char g_szClassName[] = "myWindowClass";
+const char g_szChildClassName[] = "myMDIChildWindowClass";
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+HWND g_hMDIClient = NULL;
+HWND g_hMainWindow = NULL;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -113,6 +117,29 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+// 
+HWND CreateNewMDIChild(HWND hMDIClient)
+{
+	MDICREATESTRUCT mcs;
+	HWND hChild;
+
+	mcs.szTitle = _T("[Untitled]");
+	mcs.szClass = (LPCWSTR)g_szChildClassName;
+	mcs.hOwner = GetModuleHandle(NULL);
+	mcs.x = mcs.cx = CW_USEDEFAULT;
+	mcs.y = mcs.cy = CW_USEDEFAULT;
+	mcs.style = MDIS_ALLCHILDSTYLES;
+
+	hChild = (HWND)SendMessage(hMDIClient, WM_MDICREATE, 0, (LONG)&mcs);
+	if (!hChild)
+	{
+		MessageBox(hMDIClient, _T("MDI Child creation failed."), _T("Fucking hell!"),
+			MB_ICONEXCLAMATION | MB_OK);
+	}
+	return hChild;
+}
+
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -135,18 +162,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		TBBUTTON tbb[3];
 		TBADDBITMAP tbab;
 		HWND hStatus;
+		CLIENTCREATESTRUCT ccs;
 		int statwidths[] = { 100, -1 };
 
-		// Create the Edit control
-		hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
-			WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-			0, 0, 100, 100, hWnd, (HMENU)IDC_MAIN_EDIT, GetModuleHandle(NULL), NULL);
-		if (hEdit == NULL)
-			MessageBox(hWnd, _T("Could not create edit box."), _T("Error"), MB_OK | MB_ICONERROR);
+		// Create the MDI client
 
-		hfDefault = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-		SendMessage(hEdit, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
+		// Get handle to the window menu where children are listed
+		ccs.hWindowMenu = GetSubMenu(GetMenu(hWnd), 2);
+		ccs.idFirstChild = ID_MDI_FIRSTCHILD;
 
+		g_hMDIClient = CreateWindowEx(WS_EX_CLIENTEDGE, _T("mdiclient"), NULL,
+			WS_CHILD | WS_CLIPCHILDREN | WS_VSCROLL | WS_HSCROLL | WS_VISIBLE,
+			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+			hWnd, (HMENU)IDC_MAIN_MDI, GetModuleHandle(NULL), (LPVOID)&ccs);
+
+		if (g_hMDIClient == NULL)
+			MessageBox(hWnd, _T("Could not create MDI client."), _T("Error"), MB_OK | MB_ICONERROR);
+
+		
 		// Create the toolbar
 		hTool = CreateWindowEx(0, TOOLBARCLASSNAME, NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0,
 			hWnd, (HMENU)IDC_MAIN_TOOL, GetModuleHandle(NULL), NULL);
@@ -183,37 +216,62 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP, 0, 0, 0, 0,
 			hWnd, (HMENU)IDC_MAIN_STATUS, GetModuleHandle(NULL), NULL);
 
-
 		SendMessage(hStatus, SB_SETPARTS, sizeof(statwidths) / sizeof(int), (LPARAM)statwidths);
-		SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)"Hi there :)");
+		SendMessage(hStatus, SB_SETTEXTA, 0, (LPARAM)"Hi Anthony!");
 	}
 	break;
-    case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId)
-            {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-			case IDM_FILE_NEW:
-				SetDlgItemText(hWnd, IDC_MAIN_EDIT, _T(""));
-				break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-			case IDM_FILE_OPEN:
-				DoFileOpen(hWnd);
-				break;
-			case IDM_FILE_SAVEAS:
-				DoFileSave(hWnd);
-				break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
-        break;
+	case WM_COMMAND:
+	{
+		switch (LOWORD(wParam))
+		{
+		case IDM_FILE_EXIT:
+			PostMessage(hWnd, WM_CLOSE, 0, 0);
+			break;
+		case IDM_FILE_NEW:
+			CreateNewMDIChild(g_hMDIClient);
+			break;
+		case IDM_FILE_OPEN:
+		{
+			HWND hChild = CreateNewMDIChild(g_hMDIClient);
+			if (hChild)
+			{
+				DoFileOpen(hChild, g_hMainWindow);
+			}
+		}
+		break;
+		case IDM_FILE_CLOSE:
+		{
+			HWND hChild = (HWND)SendMessage(g_hMDIClient, WM_MDIGETACTIVE, 0, 0);
+			if (hChild)
+			{
+				SendMessage(hChild, WM_CLOSE, 0, 0);
+			}
+		}
+		break;
+		case IDM_WINDOW_TITLE:
+			SendMessage(g_hMDIClient, WM_MDITILE, 0, 0);
+			break;
+		case IDM_WINDOW_CASCADE:
+			SendMessage(g_hMDIClient, WM_MDICASCADE, 0, 0);
+			break;
+		default:
+		{
+			if (LOWORD(wParam) >= ID_MDI_FIRSTCHILD)
+			{
+				DefFrameProc(hWnd, g_hMDIClient, WM_COMMAND, wParam, lParam);
+			}
+			else
+			{
+				HWND hChild = (HWND)SendMessage(g_hMDIClient, WM_MDIGETACTIVE, 0, 0);
+				if (hChild)
+				{
+					SendMessage(hChild, WM_COMMAND, wParam, lParam);
+				}
+			}
+		}
+		}
+	}
+	break;
 	case WM_SIZE:
 		{
 			HWND hTool;
@@ -259,10 +317,127 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         break;
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefFrameProc(hWnd, g_hMDIClient, message, wParam, lParam);
     }
     return 0;
 }
+
+LRESULT CALLBACK MDIChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_CREATE:
+	{
+		HFONT hfDefault;
+		HWND hEdit;
+
+		// Create Edit Control
+
+		hEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
+			WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+			0, 0, 100, 100, hwnd, (HMENU)IDC_CHILD_EDIT, GetModuleHandle(NULL), NULL);
+		if (hEdit == NULL)
+			MessageBox(hwnd, _T("Could not create edit box."), _T("Error"), MB_OK | MB_ICONERROR);
+
+		hfDefault = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+		SendMessage(hEdit, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
+	}
+	break;
+	case WM_MDIACTIVATE:
+	{
+		HMENU hMenu, hFileMenu;
+		UINT EnableFlag;
+
+		hMenu = GetMenu(g_hMainWindow);
+		if (hwnd == (HWND)lParam)
+		{	   //being activated, enable the menus
+			EnableFlag = MF_ENABLED;
+		}
+		else
+		{						   //being de-activated, gray the menus
+			EnableFlag = MF_GRAYED;
+		}
+
+		EnableMenuItem(hMenu, 1, MF_BYPOSITION | EnableFlag);
+		EnableMenuItem(hMenu, 2, MF_BYPOSITION | EnableFlag);
+
+		hFileMenu = GetSubMenu(hMenu, 0);
+		EnableMenuItem(hFileMenu, IDM_FILE_SAVEAS, MF_BYCOMMAND | EnableFlag);
+
+		EnableMenuItem(hFileMenu, IDM_FILE_CLOSE, MF_BYCOMMAND | EnableFlag);
+		EnableMenuItem(hFileMenu, IDM_FILE_CLOSEALL, MF_BYCOMMAND | EnableFlag);
+
+		DrawMenuBar(g_hMainWindow);
+	}
+	break;
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case IDM_FILE_OPEN:
+			DoFileOpen(hwnd, g_hMainWindow);
+			break;
+		case IDM_FILE_SAVEAS:
+			DoFileSave(hwnd, g_hMainWindow);
+			break;
+		case IDM_EDIT_CUT:
+			SendDlgItemMessage(hwnd, IDC_CHILD_EDIT, WM_CUT, 0, 0);
+			break;
+		case IDM_EDIT_COPY:
+			SendDlgItemMessage(hwnd, IDC_CHILD_EDIT, WM_COPY, 0, 0);
+			break;
+		case IDM_EDIT_PASTE:
+			SendDlgItemMessage(hwnd, IDC_CHILD_EDIT, WM_PASTE, 0, 0);
+			break;
+		}
+		break;
+	case WM_SIZE:
+	{
+		HWND hEdit;
+		RECT rcClient;
+
+		// Calculate remaining height and size edit
+
+		GetClientRect(hwnd, &rcClient);
+
+		hEdit = GetDlgItem(hwnd, IDC_CHILD_EDIT);
+		SetWindowPos(hEdit, NULL, 0, 0, rcClient.right, rcClient.bottom, SWP_NOZORDER);
+	}
+	return DefMDIChildProc(hwnd, msg, wParam, lParam);
+	default:
+		return DefMDIChildProc(hwnd, msg, wParam, lParam);
+
+	}
+	return 0;
+}
+
+BOOL SetUpMDIChildWindowClass(HINSTANCE hInstance)
+{
+	WNDCLASSEX wc;
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = MDIChildWndProc;
+	wc.cbClsExtra = 0;
+	wc.cbWndExtra = 0;
+	wc.hInstance = hInstance;
+	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)(COLOR_3DFACE + 1);
+	wc.lpszMenuName = NULL;
+	wc.lpszClassName = (LPCWSTR)g_szChildClassName;
+	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+
+	if (!RegisterClassEx(&wc))
+	{
+		MessageBox(0, _T("Could Not Register Child Window"), _T("Oh Oh..."),
+			MB_ICONEXCLAMATION | MB_OK);
+		return FALSE;
+	}
+	else
+		return TRUE;
+}
+
+
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)

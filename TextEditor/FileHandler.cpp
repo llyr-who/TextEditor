@@ -25,7 +25,7 @@ BOOL LoadTextFileToEdit(HWND hEdit, LPCTSTR pszFileName)
 				{
 					pszFileText[dwFileSize] = 0; // Add null terminator
 					if (SetWindowTextA(hEdit, pszFileText))
-						bSuccess = TRUE; // It worked!
+						bSuccess = TRUE;
 				}
 				GlobalFree(pszFileText);
 			}
@@ -71,7 +71,7 @@ BOOL SaveTextFileFromEdit(HWND hEdit, LPCTSTR pszFileName)
 	return bSuccess;
 }
 
-void DoFileOpen(HWND hwnd)
+void DoFileOpen(HWND hwnd, HWND g_hMainWindow)
 {
 	OPENFILENAME ofn;
 	char szFileName[MAX_PATH] = "";
@@ -89,11 +89,17 @@ void DoFileOpen(HWND hwnd)
 	if (GetOpenFileName(&ofn))
 	{
 		HWND hEdit = GetDlgItem(hwnd, IDC_MAIN_EDIT);
-		LoadTextFileToEdit(hEdit, (LPCTSTR)szFileName);
+		if (LoadTextFileToEdit(hEdit, (LPCTSTR)szFileName))
+		{
+			// Send text to the status bar
+			SendDlgItemMessage(g_hMainWindow, IDC_MAIN_STATUS, SB_SETTEXT, 0, (LPARAM)"Opened...");
+			SendDlgItemMessage(g_hMainWindow, IDC_MAIN_STATUS, SB_SETTEXT, 1, (LPARAM)szFileName);
+			SetWindowText(hwnd, (LPCTSTR)szFileName);
+		}
 	}
 }
 
-void DoFileSave(HWND hwnd)
+void DoFileSave(HWND hwnd, HWND g_hMainWindow)
 {
 	OPENFILENAME ofn;
 	char szFileName[MAX_PATH] = "";
@@ -111,6 +117,12 @@ void DoFileSave(HWND hwnd)
 	if (GetSaveFileName(&ofn))
 	{
 		HWND hEdit = GetDlgItem(hwnd, IDC_MAIN_EDIT);
-		SaveTextFileFromEdit(hEdit, (LPCTSTR)szFileName);
+		if (SaveTextFileFromEdit(hEdit, (LPCTSTR)szFileName))
+		{
+			SendDlgItemMessage(g_hMainWindow, IDC_MAIN_STATUS, SB_SETTEXT, 0, (LPARAM)"Saved...");
+			SendDlgItemMessage(g_hMainWindow, IDC_MAIN_STATUS, SB_SETTEXT, 1, (LPARAM)szFileName);
+
+			SetWindowText(hwnd, (LPCTSTR)szFileName);
+		}
 	}
 }
