@@ -33,8 +33,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
-
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_TEXTEDITOR, szWindowClass, MAX_LOADSTRING);
@@ -51,9 +49,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg;
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (GetMessage(&msg, nullptr, 0, 0) > 0)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        if (!TranslateMDISysAccel(g_hMainWindow, &msg))
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -116,6 +114,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
+   g_hMainWindow = hWnd;
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -125,11 +125,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 // 
 HWND CreateNewMDIChild(HWND hMDIClient)
 {
-	MDICREATESTRUCTA mcs;
+	MDICREATESTRUCT mcs;
 	HWND hChild;
 
-	mcs.szTitle = "[Untitled]";
-	mcs.szClass = g_szChildClassName;
+	mcs.szTitle = _T("[Untitled]");
+	mcs.szClass = (LPCWSTR)g_szChildClassName;
 	mcs.hOwner = GetModuleHandle(NULL);
 	mcs.x = mcs.cx = CW_USEDEFAULT;
 	mcs.y = mcs.cy = CW_USEDEFAULT;
