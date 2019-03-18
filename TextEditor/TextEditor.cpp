@@ -22,6 +22,8 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+BOOL				SetUpMDIChildWindowClass(HINSTANCE hInstance);
+LRESULT CALLBACK	MDIChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -103,6 +105,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
+   if (!SetUpMDIChildWindowClass(hInstance))
+	   return 0;
+
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
@@ -120,20 +125,21 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 // 
 HWND CreateNewMDIChild(HWND hMDIClient)
 {
-	MDICREATESTRUCT mcs;
+	MDICREATESTRUCTA mcs;
 	HWND hChild;
 
-	mcs.szTitle = _T("[Untitled]");
-	mcs.szClass = (LPCWSTR)g_szChildClassName;
+	mcs.szTitle = "[Untitled]";
+	mcs.szClass = g_szChildClassName;
 	mcs.hOwner = GetModuleHandle(NULL);
 	mcs.x = mcs.cx = CW_USEDEFAULT;
 	mcs.y = mcs.cy = CW_USEDEFAULT;
 	mcs.style = MDIS_ALLCHILDSTYLES;
 
-	hChild = (HWND)SendMessage(hMDIClient, WM_MDICREATE, 0, (LONG)&mcs);
+	hChild = (HWND)SendMessageA(hMDIClient, WM_MDICREATE, 0, (LPARAM)&mcs);
 	if (!hChild)
 	{
-		MessageBox(hMDIClient, _T("MDI Child creation failed."), _T("Fucking hell!"),
+		DWORD err = GetLastError(); // err = 1407 ==> Cannot find window class
+		MessageBoxA(hMDIClient, "MDI Child creation failed.", "Fucking hell!",
 			MB_ICONEXCLAMATION | MB_OK);
 	}
 	return hChild;
