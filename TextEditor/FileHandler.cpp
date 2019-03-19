@@ -88,7 +88,7 @@ void DoFileOpen(HWND hwnd, HWND g_hMainWindow)
 
 	if (GetOpenFileName(&ofn))
 	{
-		HWND hEdit = GetDlgItem(hwnd, IDC_MAIN_EDIT);
+		HWND hEdit = GetDlgItem(hwnd, IDC_CHILD_EDIT);
 		if (LoadTextFileToEdit(hEdit, (LPCTSTR)szFileName))
 		{
 			// Send text to the status bar
@@ -116,7 +116,7 @@ void DoFileSave(HWND hwnd, HWND g_hMainWindow)
 
 	if (GetSaveFileName(&ofn))
 	{
-		HWND hEdit = GetDlgItem(hwnd, IDC_MAIN_EDIT);
+		HWND hEdit = GetDlgItem(hwnd, IDC_CHILD_EDIT);
 		if (SaveTextFileFromEdit(hEdit, (LPCTSTR)szFileName))
 		{
 			SendDlgItemMessage(g_hMainWindow, IDC_MAIN_STATUS, SB_SETTEXT, 0, (LPARAM)"Saved...");

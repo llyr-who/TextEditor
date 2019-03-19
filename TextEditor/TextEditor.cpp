@@ -72,7 +72,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
 
-    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.cbSize = sizeof(WNDCLASSEXW);
 
     wcex.style          = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc    = WndProc;
@@ -125,11 +125,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 // 
 HWND CreateNewMDIChild(HWND hMDIClient)
 {
-	MDICREATESTRUCT mcs;
+	MDICREATESTRUCTA mcs;
 	HWND hChild;
 
-	mcs.szTitle = _T("[Untitled]");
-	mcs.szClass = (LPCWSTR)g_szChildClassName;
+	mcs.szTitle = "[Untitled]";
+	mcs.szClass = g_szChildClassName;
 	mcs.hOwner = GetModuleHandle(NULL);
 	mcs.x = mcs.cx = CW_USEDEFAULT;
 	mcs.y = mcs.cy = CW_USEDEFAULT;
@@ -138,7 +138,7 @@ HWND CreateNewMDIChild(HWND hMDIClient)
 	hChild = (HWND)SendMessageA(hMDIClient, WM_MDICREATE, 0, (LPARAM)&mcs);
 	if (!hChild)
 	{
-		DWORD err = GetLastError(); // err = 1407 ==> Cannot find window class
+		DWORD err = GetLastError(); 
 		MessageBoxA(hMDIClient, "MDI Child creation failed.", "Fucking hell!",
 			MB_ICONEXCLAMATION | MB_OK);
 	}
@@ -226,6 +226,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		SendMessage(hStatus, SB_SETTEXTA, 0, (LPARAM)"Hi Anthony!");
 	}
 	break;
+	case WM_SIZE:
+	{
+		HWND hTool;
+		RECT rcTool;
+		int iToolHeight;
+
+		HWND hStatus;
+		RECT rcStatus;
+		int iStatusHeight;
+
+		HWND hEdit;
+		int iEditHeight;
+		RECT rcClient;
+
+		// Size toolbar and get height
+		hTool = GetDlgItem(hWnd, IDC_MAIN_TOOL);
+		SendMessage(hTool, TB_AUTOSIZE, 0, 0);
+		GetWindowRect(hTool, &rcTool);
+		iToolHeight = rcTool.bottom - rcTool.top;
+
+		// Size status bar and get height
+		hStatus = GetDlgItem(hWnd, IDC_MAIN_STATUS);
+		SendMessage(hStatus, WM_SIZE, 0, 0);
+		GetWindowRect(hStatus, &rcStatus);
+		iStatusHeight = rcStatus.bottom - rcStatus.top;
+
+		// Calculate remaining height and size edit
+		GetClientRect(hWnd, &rcClient);
+		iEditHeight = rcClient.bottom - iToolHeight - iStatusHeight;
+		hEdit = GetDlgItem(hWnd, IDC_MAIN_EDIT);
+		SetWindowPos(hEdit, NULL, 0, iToolHeight, rcClient.right, iEditHeight, SWP_NOZORDER);
+	}
+	break;
+	case WM_CLOSE:
+		DestroyWindow(hWnd);
+	break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+	break;
 	case WM_COMMAND:
 	{
 		switch (LOWORD(wParam))
@@ -278,50 +317,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	break;
-	case WM_SIZE:
-		{
-			HWND hTool;
-			RECT rcTool;
-			int iToolHeight;
-
-			HWND hStatus;
-			RECT rcStatus;
-			int iStatusHeight;
-
-			HWND hEdit;
-			int iEditHeight;
-			RECT rcClient;
-
-			// Size toolbar and get height
-			hTool = GetDlgItem(hWnd, IDC_MAIN_TOOL);
-			SendMessage(hTool, TB_AUTOSIZE, 0, 0);
-			GetWindowRect(hTool, &rcTool);
-			iToolHeight = rcTool.bottom - rcTool.top;
-
-			// Size status bar and get height
-			hStatus = GetDlgItem(hWnd, IDC_MAIN_STATUS);
-			SendMessage(hStatus, WM_SIZE, 0, 0);
-			GetWindowRect(hStatus, &rcStatus);
-			iStatusHeight = rcStatus.bottom - rcStatus.top;
-
-			// Calculate remaining height and size edit
-			GetClientRect(hWnd, &rcClient);
-			iEditHeight = rcClient.bottom - iToolHeight - iStatusHeight;
-			hEdit = GetDlgItem(hWnd, IDC_MAIN_EDIT);
-			SetWindowPos(hEdit, NULL, 0, iToolHeight, rcClient.right, iEditHeight, SWP_NOZORDER);
-		}
-	break;
-    case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
-        }
-        break;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
     default:
         return DefFrameProc(hWnd, g_hMDIClient, message, wParam, lParam);
     }
@@ -332,7 +327,7 @@ LRESULT CALLBACK MDIChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 {
 	switch (msg)
 	{
-	case WM_CREATE:
+	case WM_MDICREATE:
 	{
 		HFONT hfDefault;
 		HWND hEdit;
@@ -418,9 +413,9 @@ LRESULT CALLBACK MDIChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 
 BOOL SetUpMDIChildWindowClass(HINSTANCE hInstance)
 {
-	WNDCLASSEX wc;
+	WNDCLASSEXA wc;
 
-	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.cbSize = sizeof(WNDCLASSEXA);
 	wc.style = CS_HREDRAW | CS_VREDRAW;
 	wc.lpfnWndProc = MDIChildWndProc;
 	wc.cbClsExtra = 0;
@@ -430,10 +425,10 @@ BOOL SetUpMDIChildWindowClass(HINSTANCE hInstance)
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)(COLOR_3DFACE + 1);
 	wc.lpszMenuName = NULL;
-	wc.lpszClassName = (LPCWSTR)g_szChildClassName;
+	wc.lpszClassName = g_szChildClassName;
 	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
 
-	if (!RegisterClassEx(&wc))
+	if (!RegisterClassExA(&wc))
 	{
 		MessageBox(0, _T("Could Not Register Child Window"), _T("Oh Oh..."),
 			MB_ICONEXCLAMATION | MB_OK);
